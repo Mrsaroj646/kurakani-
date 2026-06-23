@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kurakani AI Assistant</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .chat-container { width: 450px; height: 600px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Updated Header to lay out the title and image side-by-side */
+        .chat-header { background: #4A90E2; color: white; padding: 12px 20px; display: flex; align-items: center; font-size: 1.2rem; font-weight: bold; gap: 12px; }
+        
+        /* Styled the application profile picture */
+        .app-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255, 255, 255, 0.3); background-color: #fff; }
+        
+        .chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .message { max-width: 75%; padding: 10px 14px; border-radius: 15px; font-size: 0.95rem; line-height: 1.4; }
+        .user-message { background: #4A90E2; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .ai-message { background: #E9ECEF; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; white-space: pre-line; }
+        .input-area { display: flex; border-top: 1px solid #E9ECEF; padding: 10px; background: #fff; }
+        input { flex: 1; padding: 12px; border: 1px solid #DEE2E6; border-radius: 8px; outline: none; font-size: 0.95rem; }
+        
+        /* Keep your distinct button color matching cleanly */
+        button { background: #e24a4a; color: white; border: none; padding: 0 18px; margin-left: 8px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        button:hover { background: #c83b3b; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <img src="images/logo.png" alt="Kurakani" class="app-avatar" onerror="this.style.display='none';">
+        <span>Kurakani AI Assistant 💬</span>
+    </div>
+    <div class="chat-box" id="chatBox">
+        <div class="message ai-message">Namaste! I am Kurakani, your local parenting assistant. How can I help you today?</div>
+    </div>
+    <div class="input-area">
+        <input type="text" id="userInput" placeholder="Type your question here..." onkeypress="if(event.key === 'Enter') sendMessage()">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+    async function sendMessage() {
+        const inputField = document.getElementById('userInput');
+        const chatBox = document.getElementById('chatBox');
+        const text = inputField.value.trim();
+        if (!text) return;
+
+        // Display User Message
+        chatBox.innerHTML += `<div class="message user-message">${text}</div>`;
+        inputField.value = '';
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // Display Loading Placeholder
+        const loadingId = 'loading-' + Date.now();
+        chatBox.innerHTML += `<div class="message ai-message" id="${loadingId}">Kurakani is thinking...</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            // Call your backend server
+            const response = await fetch('http://127.0.0.1:8080/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+            
+            // Replace loading placeholder with real response
+            document.getElementById(loadingId).innerText = data;
+        } catch (error) {
+            document.getElementById(loadingId).innerText = "Error: Could not connect to Kurakani server.";
+        }
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+</script>
+</body>
+</html>
