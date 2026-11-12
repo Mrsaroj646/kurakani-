@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kurakani AI Assistant</title>
+    <link rel="icon" href="/static/images/logo.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <main class="chat-container">
+        <header class="chat-header">
+            <img src="/static/images/logo.png" alt="Kurakani logo" class="app-avatar">
+            <div>
+                <h1>Kurakani AI Assistant</h1>
+                <p class="subtitle">Your local parenting companion</p>
+            </div>
+        </header>
+
+        <section class="chat-box" id="chatBox" aria-live="polite">
+            <div class="message ai-message">Namaste! 🙏 I am Kurakani, your local parenting assistant. How can I help you today?</div>
+        </section>
+
+        <form class="input-area" id="chatForm">
+            <input type="text" id="userInput" placeholder="Type your question here..."
+                   maxlength="2000" autocomplete="off" aria-label="Your message">
+            <button type="submit" id="sendButton">Send</button>
+        </form>
+    </main>
+
+    <p class="disclaimer">
+        Kurakani gives general information only and is not a substitute for professional advice.
+    </p>
+
+    <script src="/static/js/chat.js"></script>
+</body>
+</html>
