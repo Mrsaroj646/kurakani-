@@ -1,37 +1,65 @@
-import os  # <-- Add this line right at the top!
-from fastapi import FastAPI
+"""Kurakani - a local AI parenting assistant built with FastAPI and Ollama."""
+
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from app.services.ai_service import ai_service
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
-app = FastAPI()
+from app.config import settings
+from app.services import AIServiceError, ai_service
 
-# Allow your webpage to communicate with your backend securely
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = BASE_DIR / "static"
+
+app = FastAPI(
+    title="Kurakani AI Assistant",
+    description="A local AI chatbot that gives parenting and child-development advice.",
+    version="1.0.0",
 )
 
+# Serve CSS, JavaScript and images from the /static folder
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(..., min_length=1, max_length=2000)
 
-@app.get("/")
-def read_root():
-    # This automatically finds the correct folder path no matter what
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    file_path = os.path.join(base_dir, "index.html")
-    
-    # If it's accidentally inside the app folder, check there too
-    if not os.path.exists(file_path):
-        file_path = os.path.join(base_dir, "app", "index.html")
-        
-    return FileResponse(file_path)
 
-@app.post("/api/chat")
-def chat_endpoint(request: ChatRequest):
-    ai_response = ai_service.generate_chat_response(request.message)
-    return ai_response
+class ChatResponse(BaseModel):
+    reply: str
+
+
+@app.get("/", include_in_schema=False)
+def index():
+    """Return the chat web page."""
+    return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/api/health")
+def health():
+    return {"status": "ok", "model": settings.OLLAMA_MODEL}
+
+
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
+    """Send a message to the AI model and return its reply."""
+    message = request.message.strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+
+    try:
+        # The HTTP call to Ollama is blocking, so run it in a worker thread
+        reply = await run_in_threadpool(ai_service.generate_chat_response, message)
+    except AIServiceError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    return ChatResponse(reply=reply)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("app.main:app", host=settings.HOST, port=settings.PORT, reload=True)
