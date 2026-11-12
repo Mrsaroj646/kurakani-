@@ -119,6 +119,18 @@ python -m app.main
 Open **http://127.0.0.1:8000** in your browser.
 Interactive API documentation is available at **http://127.0.0.1:8000/docs**.
 
+> The page also works if you open `static/index.html` directly or with VS Code
+> Live Server, as long as the backend from step 5 is running on port 8000.
+
+### Checklist if the chat does not reply
+
+1. Is Ollama running? → `ollama list` should work without an error
+2. Does the model exist? → `kurakani` must appear in `ollama list`
+   (if not: `ollama create kurakani -f Modelfile`)
+3. Is the backend running? → http://127.0.0.1:8000/api/health should show `"status": "ok"`
+4. Run commands from the **project root** (the folder that contains `app/`),
+   not from inside `app/`
+
 ## API Reference
 
 | Method | Endpoint      | Body                       | Response              |

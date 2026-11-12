@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -20,8 +20,14 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Serve CSS, JavaScript and images from the /static folder
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+# Allow the page to call the API even when it is opened directly as a file
+# or from another dev server (e.g. VS Code Live Server on port 5500)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 
 
 class ChatRequest(BaseModel):
@@ -30,12 +36,6 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
-
-
-@app.get("/", include_in_schema=False)
-def index():
-    """Return the chat web page."""
-    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/api/health")
@@ -57,6 +57,11 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     return ChatResponse(reply=reply)
+
+
+# Serve the chat page, CSS, JavaScript and images.
+# Mounted last so it does not override the /api routes above.
+app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
 
 
 if __name__ == "__main__":

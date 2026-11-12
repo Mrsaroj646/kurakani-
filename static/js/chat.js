@@ -5,6 +5,34 @@ const inputField = document.getElementById("userInput");
 const sendButton = document.getElementById("sendButton");
 const chatBox = document.getElementById("chatBox");
 
+// Address of the FastAPI backend, used when this page is NOT served by it
+// (opened as a file or through another dev server such as Live Server).
+const BACKEND_URL = "http://127.0.0.1:8000";
+
+/** POST to the chat API, falling back to BACKEND_URL if needed. */
+async function postChat(message) {
+    const options = {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+    };
+
+    if (location.protocol === "file:") {
+        return fetch(`${BACKEND_URL}/api/chat`, options);
+    }
+
+    try {
+        const response = await fetch("/api/chat", options);
+        // Our backend always answers with JSON. Anything else means this page
+        // is being served by a different server (e.g. Live Server).
+        const type = response.headers.get("content-type") || "";
+        if (type.includes("application/json")) return response;
+    } catch (error) {
+        // network error - try the backend address below
+    }
+    return fetch(`${BACKEND_URL}/api/chat`, options);
+}
+
 /**
  * Add a message bubble to the chat.
  * textContent is used (not innerHTML) so user input can never inject HTML.
@@ -24,12 +52,7 @@ async function sendMessage(text) {
     sendButton.disabled = true;
 
     try {
-        // Relative URL: works on whatever host/port the server runs on
-        const response = await fetch("/api/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: text }),
-        });
+        const response = await postChat(text);
         const data = await response.json();
 
         if (!response.ok) {
@@ -39,7 +62,10 @@ async function sendMessage(text) {
         loading.textContent = data.reply;
         loading.classList.remove("loading");
     } catch (error) {
-        loading.textContent = `Error: ${error.message || "Could not connect to Kurakani server."}`;
+        const reason = error instanceof TypeError
+            ? `Could not connect to the Kurakani server at ${BACKEND_URL}. Is it running?`
+            : error.message;
+        loading.textContent = `Error: ${reason}`;
         loading.classList.remove("loading");
         loading.classList.add("error");
     } finally {
